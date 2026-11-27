@@ -19,7 +19,7 @@ interface Props {
   onTitle: (t: string) => void
 }
 
-type Side = 'snapshots' | 'reference' | null
+type SideTab = 'snapshots' | 'reference'
 
 const pref = <T,>(key: string, fallback: T): T => {
   try {
@@ -52,13 +52,22 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
   const [doc, setDoc] = useState<{ id: string; content: RichDoc } | null>(null)
   const [status, setStatus] = useState<SaveStatus>({ state: 'saved', at: '' })
   const [live, setLive] = useState<{ words: number; chars: number } | null>(null)
-  const [side, setSide] = useState<Side>(() => pref<Side>('foliant:side', 'snapshots'))
+  const [sideOpen, setSideOpen] = useState<boolean>(() => pref('foliant:sideOpen', true))
+  const [sideTab, setSideTab] = useState<SideTab>(() => pref<SideTab>('foliant:sideTab', 'snapshots'))
+  const showSide = (tab: SideTab | null): void => {
+    if (tab) {
+      setSideTab(tab)
+      setPref('foliant:sideTab', tab)
+    }
+    setSideOpen(tab !== null)
+    setPref('foliant:sideOpen', tab !== null)
+  }
   const [refId, setRefId] = useState<string | null>(null)
   const [snapVersion, setSnapVersion] = useState(0)
   const [recovered, setRecovered] = useState<string[]>(project.recovered)
   const [toast, setToast] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [zoom, setZoom] = useState<number>(() => pref('foliant:zoom', 1.25))
+  const [zoom, setZoom] = useState<number>(() => pref('foliant:zoom2', 0))
   const [editor, setEditor] = useState<TipTap | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const handle = useRef<EditorHandle>(null)
@@ -120,7 +129,7 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
     try {
       await api().createSnapshot(path, selected, name)
       setSnapVersion((v) => v + 1)
-      setSide('snapshots')
+      showSide('snapshots')
       showToast('Snapshot taken')
     } catch (e) {
       showToast(`Snapshot failed: ${cleanError(e)}`)
@@ -177,16 +186,9 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
   }
 
   const item = selected ? findItem(binder, selected) : undefined
-  const page = manifest.settings.page
-  const textWidthPx = ((page.widthMm - page.marginLeftMm - page.marginRightMm) * 96) / 25.4
   const total = manuscriptWords(binder, counts)
   const goal = manifest.settings.dailyGoal
   const net = today.added - today.removed
-  const sideToggle = (s: Side): void => {
-    const v = side === s ? null : s
-    setSide(v)
-    setPref('foliant:side', v)
-  }
 
   return (
     <div className="project">
@@ -199,7 +201,7 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
         onEmptyTrash={() => void emptyTrash()}
         onQuickRef={(id) => {
           setRefId(id)
-          setSide('reference')
+          showSide('reference')
         }}
       />
       <main className="center-pane">
@@ -212,16 +214,15 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
             </button>
           </div>
         )}
-        <Toolbar editor={editor} zoom={zoom} onZoom={(z) => { setZoom(z); setPref('foliant:zoom', z) }} onSnapshot={() => void takeSnapshot()} />
+        <Toolbar editor={editor} zoom={zoom} onZoom={(z) => { setZoom(z); setPref('foliant:zoom2', z) }} onSnapshot={() => void takeSnapshot()} />
         <div className="doc-title-row">
           <span className="doc-title" data-testid="doc-title">{item?.title ?? ''}</span>
           <span className="grow" />
-          <button className={`tool wide ${side === 'snapshots' ? 'on' : ''}`} onClick={() => sideToggle('snapshots')} title="Show snapshots">
-            <Icon name="camera" /> Snapshots
-          </button>
-          <button className={`tool wide ${side === 'reference' ? 'on' : ''}`} onClick={() => sideToggle('reference')} title="Show a scene for reference while you write">
-            <Icon name="scene" /> Reference
-          </button>
+          {!sideOpen && (
+            <button className="tool" onClick={() => showSide(sideTab)} title="Show the sidebar (snapshots, reference)" data-testid="open-sidebar">
+              <Icon name="sidebar" />
+            </button>
+          )}
           <button className="tool" onClick={() => setSettingsOpen(true)} title="Project settings: text style, page, goal" data-testid="open-settings">
             <Icon name="settings" />
           </button>
@@ -234,7 +235,7 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
             docId={doc.id}
             initial={doc.content}
             style={manifest.settings.text}
-            textWidthPx={textWidthPx}
+            page={manifest.settings.page}
             zoom={zoom}
             handleRef={handle}
             onEditor={setEditor}
@@ -275,9 +276,22 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
           <SaveIndicator status={status} />
         </footer>
       </main>
-      {side && (
+      {sideOpen && (
         <aside className="side">
-          {side === 'snapshots' && selected && item && (
+          <div className="side-head">
+            <div className="segmented" role="tablist">
+              <button role="tab" aria-selected={sideTab === 'snapshots'} className={sideTab === 'snapshots' ? 'on' : ''} onClick={() => showSide('snapshots')} data-testid="tab-snapshots">
+                Snapshots
+              </button>
+              <button role="tab" aria-selected={sideTab === 'reference'} className={sideTab === 'reference' ? 'on' : ''} onClick={() => showSide('reference')} data-testid="tab-reference">
+                Reference
+              </button>
+            </div>
+            <button className="icon-btn subtle" onClick={() => showSide(null)} title="Hide the sidebar" aria-label="Hide the sidebar">
+              <Icon name="sidebar" />
+            </button>
+          </div>
+          {sideTab === 'snapshots' && selected && item && (
             <SnapshotsPanel
               projectPath={path}
               docId={selected}
@@ -288,7 +302,7 @@ export function ProjectView({ project, visible, onTitle }: Props): React.JSX.Ele
               onRestore={restore}
             />
           )}
-          {side === 'reference' && (
+          {sideTab === 'reference' && (
             <QuickRef projectPath={path} binder={binder} id={refId} onPick={setRefId} style={manifest.settings.text} currentId={selected} />
           )}
         </aside>

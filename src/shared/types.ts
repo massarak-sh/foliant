@@ -42,8 +42,7 @@ export const ITEM_KINDS: { kind: ItemKind; label: string }[] = [
   { kind: 'chapter', label: 'Chapter' },
   { kind: 'section', label: 'Section' },
   { kind: 'scene', label: 'Scene' },
-  { kind: 'folder', label: 'Folder' },
-  { kind: 'note', label: 'Note' }
+  { kind: 'folder', label: 'Folder' }
 ]
 
 export interface BinderItem {
@@ -66,7 +65,7 @@ export interface BinderItem {
 export interface BinderFile {
   formatVersion: number
   manuscript: BinderItem[]
-  /** Research / notes area outside the manuscript. Never exported. */
+  /** Unused (kept for compatibility); older projects' items here are moved to the trash on open. */
   research: BinderItem[]
   trash: BinderItem[]
 }

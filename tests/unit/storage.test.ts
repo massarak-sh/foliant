@@ -119,6 +119,18 @@ describe('ProjectStore', () => {
     expect(JSON.stringify(doc.content)).toContain('version 19')
   })
 
+  it('moves items from the old Notes & research area into the trash', async () => {
+    const s = await ProjectStore.create(dir, 'Book')
+    expect(s.binder.research).toEqual([])
+    const b = structuredClone(s.binder)
+    b.research.push({ id: 'oldnote1', kind: 'note', title: 'Ideas', children: [], created: '', modified: '' })
+    await s.saveBinder(b)
+    await s.close()
+    const again = await ProjectStore.open(s.root)
+    expect(again.binder.research).toEqual([])
+    expect(again.binder.trash[0].title).toBe('Ideas')
+  })
+
   it('rejects ids that try to escape the project folder', async () => {
     const s = await ProjectStore.create(dir, 'Book')
     await expect(s.loadDoc('../../etc/passwd')).rejects.toThrow()

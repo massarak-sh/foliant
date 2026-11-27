@@ -1,9 +1,10 @@
-import { useEffect, useImperativeHandle, useRef } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useEditor, EditorContent, type Editor as TipTap } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
-import type { RichDoc, SaveResult, TextStyle } from '../../../shared/types'
+import type { PageSetup, RichDoc, SaveResult, TextStyle } from '../../../shared/types'
+import { EmDash, Pagination } from '../editor/pagination'
 import { countChars, countWords } from '../../../shared/text'
 import { api } from '../api'
 import { registerFlusher } from '../flush'
@@ -27,7 +28,7 @@ interface Props {
   docId: string
   initial: RichDoc
   style: TextStyle
-  textWidthPx: number
+  page: PageSetup
   zoom: number
   handleRef: React.Ref<EditorHandle>
   onEditor: (e: TipTap | null) => void
@@ -39,9 +40,31 @@ interface Props {
 const IDLE_MS = 600 // save after this pause in typing
 const MAX_WAIT_MS = 3000 // …but never keep edits unsaved longer than this while typing
 const RETRY_MS = 3000
+const PAGE_GAP = 28 // space between sheets, px
 
 export function Editor(props: Props): React.JSX.Element {
-  const { projectPath, docId, initial, style, textWidthPx, zoom } = props
+  const { projectPath, docId, initial, style, page, zoom } = props
+  const mm = (v: number): number => (v * 96) / 25.4
+  const pageW = mm(page.widthMm)
+  const pageH = mm(page.heightMm)
+  const top = mm(page.marginTopMm)
+  const bottom = mm(page.marginBottomMm)
+  const left = mm(page.marginLeftMm)
+  const textW = pageW - left - mm(page.marginRightMm)
+  const geometry = useRef({ contentHeight: pageH - top - bottom, between: bottom + PAGE_GAP + top })
+  geometry.current = { contentHeight: pageH - top - bottom, between: bottom + PAGE_GAP + top }
+  const [pages, setPages] = useState(1)
+  // "Fit width" (zoom 0): scale the page to the space available.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [avail, setAvail] = useState(0)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setAvail(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const effZoom = zoom > 0 ? zoom : avail ? Math.max(0.6, Math.min(1.6, (avail - 48) / pageW)) : 1
   const cb = useRef(props)
   cb.current = props
 
@@ -129,7 +152,9 @@ export function Editor(props: Props): React.JSX.Element {
           link: { openOnClick: false, autolink: false }
         }),
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
-        Highlight
+        Highlight,
+        EmDash,
+        Pagination.configure({ getGeometry: () => geometry.current, onPages: (n) => setPages(n) })
       ],
       content: initial,
       autofocus: false,
@@ -200,21 +225,36 @@ export function Editor(props: Props): React.JSX.Element {
     '--text-size': `${style.fontSizePt}pt`,
     '--text-leading': String(style.lineSpacing * 1.2),
     '--text-indent': `${style.firstLineIndentEm}em`,
-    '--text-para-space': `${style.paragraphSpacingPt}pt`,
-    '--text-width': `${textWidthPx}px`,
-    zoom
+    '--text-para-space': `${style.paragraphSpacingPt}pt`
   } as React.CSSProperties
 
+  const stackH = pages * (pageH + PAGE_GAP) - PAGE_GAP
   return (
-    <div className="editor-scroll" onMouseDown={(e) => {
-      // Clicking the grey area around the page puts the cursor in the text.
-      if (e.target === e.currentTarget) {
-        e.preventDefault()
-        editor?.commands.focus('end')
-      }
-    }}>
-      <div className="paper" style={cssVars}>
-        <EditorContent editor={editor} />
+    <div
+      className="editor-scroll"
+      ref={scrollRef}
+      onMouseDown={(e) => {
+        // Clicking around or below the text puts the cursor in it.
+        const t = e.target as HTMLElement
+        if (t === e.currentTarget || t.classList.contains('page') || t.classList.contains('page-stack')) {
+          e.preventDefault()
+          editor?.commands.focus('end')
+        }
+      }}
+    >
+      <div className="pages-zoom" style={{ zoom: effZoom }}>
+        <div className="page-stack" style={{ ...cssVars, width: pageW, height: stackH }} data-testid="page-stack" data-pages={pages}>
+          {Array.from({ length: pages }, (_, i) => (
+            <div key={i} className="page" style={{ top: i * (pageH + PAGE_GAP), height: pageH, width: pageW }}>
+              <span className="page-num" style={{ bottom: bottom / 2 - 8 }}>
+                {i + 1}
+              </span>
+            </div>
+          ))}
+          <div className="page-text" style={{ top, left, width: textW }}>
+            <EditorContent editor={editor} />
+          </div>
+        </div>
       </div>
     </div>
   )

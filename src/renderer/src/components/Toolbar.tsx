@@ -83,6 +83,7 @@ export function Toolbar({ editor, zoom, onZoom, onSnapshot }: Props): React.JSX.
       </button>
       <span className="sep" />
       <select className="tool-select" title="Zoom" value={zoom} onChange={(e) => onZoom(Number(e.target.value))}>
+        <option value={0}>Fit width</option>
         {ZOOMS.map((z) => (
           <option key={z} value={z}>
             {Math.round(z * 100)}%

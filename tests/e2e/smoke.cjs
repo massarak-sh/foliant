@@ -115,7 +115,51 @@ async function waitSaved(page) {
   await page.click('text=Open as quick reference')
   await page.waitForSelector('.ref-text >> text=snow came early')
   await shot(page, '1-writing')
-  await page.click('button:has-text("Snapshots")')
+  await page.click('[data-testid=tab-snapshots]')
+
+  step('-- becomes an em dash, and long text flows onto real pages')
+  await page.click('[data-testid="binder-The Letter"]')
+  await page.click('[data-testid=editor]')
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type(' Wait--what?')
+  await page.waitForFunction(() => document.querySelector('[data-testid=editor]').textContent.includes('Wait—what?'))
+  assert.equal(await page.getAttribute('[data-testid=page-stack]', 'data-pages'), '1')
+  const para = 'The wind pushed against the shutters all night long, and Mara lay awake counting the gusts like a child counts sheep, hoping each one would be the last. '
+  await page.evaluate((t) => {
+    const ed = document.querySelector('[data-testid=editor]').editor
+    ed.commands.insertContent(Array.from({ length: 30 }, () => ({ type: 'paragraph', content: [{ type: 'text', text: t + t + t }] })))
+  }, para)
+  await page.waitForFunction(() => Number(document.querySelector('[data-testid=page-stack]').dataset.pages) >= 3)
+  // Every line of text must sit inside a page's text area, never in a margin or between sheets.
+  const outside = await page.evaluate(() => {
+    const pages = [...document.querySelectorAll('.page')].map((p) => p.getBoundingClientRect())
+    const textArea = document.querySelector('.page-text').getBoundingClientRect()
+    const first = pages[0]
+    const topMargin = textArea.top - first.top
+    const bad = []
+    const rects = []
+    const walker = document.createTreeWalker(document.querySelector('[data-testid=editor]'), NodeFilter.SHOW_TEXT)
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const range = document.createRange()
+      range.selectNodeContents(n)
+      rects.push(...range.getClientRects())
+    }
+    for (const r of rects) {
+      if (!r.height) continue
+      const ok = pages.some((p) => r.top >= p.top + topMargin - 2 && r.bottom <= p.bottom - topMargin + 2)
+      if (!ok) bad.push([Math.round(r.top), Math.round(r.bottom), r.width > 0 ? 'w' : '', pages.map((p) => [Math.round(p.top + topMargin), Math.round(p.bottom - topMargin)])])
+    }
+    return bad
+  })
+  await page.evaluate(() => {
+    const p = document.querySelectorAll('.page')[1]
+    const sc = document.querySelector('.editor-scroll')
+    sc.scrollTop += p.getBoundingClientRect().top - sc.getBoundingClientRect().top - 330
+  })
+  await shot(page, '6-pages')
+  assert.deepEqual(outside, [], 'no text outside the page text areas')
+  await page.keyboard.press('Control+z')
+  await waitSaved(page)
 
   step('settings dialog')
   await page.click('[data-testid=open-settings]')

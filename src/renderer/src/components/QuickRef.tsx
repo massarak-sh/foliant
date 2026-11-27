@@ -39,7 +39,6 @@ export function QuickRef({ projectPath, binder, id, currentId, style, onPick }: 
   const items = allItems({ ...binder, trash: [] })
   return (
     <div className="panel quickref">
-      <div className="panel-head">Reference</div>
       <select className="block" value={id ?? ''} onChange={(e) => onPick(e.target.value)}>
         <option value="" disabled>
           Choose a scene or note to look at…

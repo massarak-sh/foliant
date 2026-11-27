@@ -90,8 +90,7 @@ export class ProjectStore {
     const chapter = makeItem('chapter', 'Chapter 1')
     const scene = makeItem('scene', 'Scene 1')
     chapter.children.push(scene)
-    const ideas = makeItem('note', 'Ideas')
-    store.binder = { formatVersion: FORMAT_VERSION, manuscript: [chapter], research: [ideas], trash: [] }
+    store.binder = { formatVersion: FORMAT_VERSION, manuscript: [chapter], research: [], trash: [] }
     store.stats = { formatVersion: FORMAT_VERSION, days: {} }
     for (const d of ['docs', 'snapshots', 'notes', 'comments', 'stats', '.journal', '.backups']) {
       await fs.mkdir(path.join(root, d), { recursive: true })
@@ -129,6 +128,12 @@ export class ProjectStore {
     store.binder = await store.readWithFallback<BinderFile>('binder.json')
     store.binder.research ??= []
     store.binder.trash ??= []
+    if (store.binder.research.length) {
+      // The separate "Notes & research" area was removed; keep anything that was there in the trash.
+      store.binder.trash.unshift(...store.binder.research)
+      store.binder.research = []
+      await store.commitJson('binder.json', store.binder)
+    }
     store.stats = (await exists(path.join(root, 'stats/days.json')))
       ? await store.readWithFallback<StatsFile>('stats/days.json')
       : { formatVersion: FORMAT_VERSION, days: {} }

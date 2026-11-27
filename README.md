@@ -2,7 +2,7 @@
 
 A calm, reliable writing app for fiction. One window, projects in tabs, a binder you can reshape freely, and saving you never have to think about.
 
-> Status: **phase 1**: writing, binder, crash-safe saving, snapshots and word counts. Backups to Google Drive, comments, notes, page view, export and Scrivener import come in the next phases.
+> Status: **phase 1**: writing, binder, crash-safe saving, snapshots, word counts and real pages. Backups to Google Drive, comments, the notes pane, export and Scrivener import come in the next phases.
 
 ---
 
@@ -37,14 +37,16 @@ You only need this if you want to run the newest unreleased code.
 
 - **New project**: pick a title and a folder (by default `Documents\Foliant`). Every project is one folder ending in `.foliant`.
 - **Tabs**: each open project is a tab at the top; the house icon opens or creates more.
-- **Binder** (left):
+- **Binder** (left): your manuscript, plus a Trash at the bottom.
   - **+ Chapter / + Scene / + Section** add an item where you'd expect: a new scene goes after the selected scene, or inside the selected chapter.
   - **Drag** items to move them. Drop on the top or bottom edge of an item to put it before or after; drop in the middle to put it *inside*.
-  - **Right-click** an item to rename it, **turn it into** a part, chapter, section, scene, folder or note (any time, in any direction), indent or outdent it, or move it to the trash.
+  - **Right-click** an item to rename it, **turn it into** a part, chapter, section, scene or folder (any time, in any direction), indent or outdent it, or move it to the trash.
   - Keyboard: **F2** renames, **Tab / Shift+Tab** indent and outdent, **Delete** moves to trash, arrow keys move around.
   - Any item can contain text *and* other items, so a chapter can have its own opening text and scenes inside it.
-- **Writing**: formatting toolbar on top: bold, italic, underline, strikethrough, highlight, alignment, headings, block quote, and a scene break (`* * *`). The writing column is exactly as wide as the text on a printed page.
+- **Writing**: formatting toolbar on top: bold, italic, underline, strikethrough, highlight, alignment, headings, block quote, and a scene break (`* * *`). Typing `--` gives an em dash (—).
+- **Real pages**: you write on actual sheets of the paper size you chose (A4 by default) with its margins. When a page is full, the text continues on the next sheet, splitting paragraphs line by line like a printed book, and every page has its number. Zoom is in the toolbar; *Fit width* scales the page to your window.
 - **Default text style**: EB Garamond 12 pt, line spacing 1.1. Change it in **⚙ Project settings**. The setting belongs to the project and later on export will use it too. A *Standard Manuscript Format* preset is ready for the export phase.
+- **Right sidebar**: switch between **Snapshots** and **Reference** at its top; the small panel icon hides or shows it.
 - **Snapshots**: **Ctrl+5** or the **Snapshot** button saves a copy of the current scene. In the **Snapshots** panel you can **Compare** a snapshot with the current text (added words in green, removed in red, or side by side), **Restore** it, rename it or delete it. Restoring always takes a snapshot of the current text first, so nothing is ever lost.
 - **Quick reference**: right-click any scene → **Open as quick reference** to keep it visible on the right while you write another.
 - **Counts** (bottom bar): words and characters in this scene, the whole manuscript, and **Today: +added −removed (net)** plus **This session**. Daily totals are saved in the project, ready for the history charts coming later. You can set a daily goal in settings.
@@ -78,7 +80,7 @@ Everything is plain JSON, readable without Foliant:
 ```
 My Novel.foliant/
   foliant.json          title, author, text style, page setup, languages
-  binder.json           the binder tree: manuscript, notes & research, trash
+  binder.json           the binder tree: manuscript and trash
   docs/<id>.json        the text of each item
   snapshots/<id>/…      snapshots of each item
   stats/days.json       words added / removed per day and the manuscript total
@@ -91,10 +93,10 @@ Translations (phase 5) will live next to the original as `docs/<id>@<lang>.json`
 
 ## Roadmap
 
-1. ✅ Editor, binder, crash-safe saving, snapshots, counts
+1. ✅ Editor, binder, crash-safe saving, snapshots, counts, real pages
 2. Automatic project backups and upload to Google Drive (through Google's API, no Drive app needed)
 3. Count history over time, comments, notes pane
-4. Real page view and export: DOCX, PDF, EPUB, FB2, standard manuscript format, whole book or chosen parts
+4. Export: DOCX, PDF, EPUB, FB2, standard manuscript format, whole book or chosen parts
 5. Scrivener import, side-by-side language versions
 
 ## For developers

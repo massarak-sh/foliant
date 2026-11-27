@@ -31,7 +31,7 @@ interface Props {
 }
 
 const RANK: Record<ItemKind, number> = { part: 0, chapter: 1, folder: 1, section: 2, scene: 3, note: 3 }
-const AREA_LABEL: Record<Area, string> = { manuscript: 'Manuscript', research: 'Notes & research', trash: 'Trash' }
+const AREA_LABEL: Record<Area, string> = { manuscript: 'Manuscript', research: 'Research', trash: 'Trash' }
 
 function defaultTitle(kind: ItemKind, binder: BinderFile): string {
   const label = ITEM_KINDS.find((k) => k.kind === kind)!.label
@@ -52,7 +52,7 @@ export function smartAdd(binder: BinderFile, kind: ItemKind, selected: string | 
   let curId = selected
   if (cur?.area === 'trash') cur = undefined
   if (!cur) {
-    const area: Area = kind === 'note' ? 'research' : 'manuscript'
+    const area: Area = 'manuscript'
     // A scene with nothing selected goes into the last chapter.
     if (RANK[kind] > 1 && area === 'manuscript') {
       const chapters = binder.manuscript.filter((i) => RANK[i.kind] < RANK[kind])
@@ -143,7 +143,6 @@ export function Binder({ binder, counts, selected, onSelect, onChange, onEmptyTr
       }
     }
     rec(binder.manuscript)
-    rec(binder.research)
     if (trashOpen) rec(binder.trash)
     return out
   }
@@ -290,8 +289,7 @@ export function Binder({ binder, counts, selected, onSelect, onChange, onEmptyTr
     if (menu.area === 'trash') {
       return (
         <>
-          {it && item('Put back into the manuscript', () => onChange(moveToArea(binder, it.id, 'manuscript')))}
-          {it && item('Put back into notes & research', () => onChange(moveToArea(binder, it.id, 'research')))}
+          {it && item('Put back', () => onChange(moveToArea(binder, it.id, 'manuscript')))}
           {binder.trash.length > 0 && item('Empty trash…', onEmptyTrash)}
         </>
       )
@@ -301,7 +299,6 @@ export function Binder({ binder, counts, selected, onSelect, onChange, onEmptyTr
         <>
           {item('New chapter', () => add('chapter', null))}
           {item('New scene', () => add('scene', null))}
-          {item('New note', () => add('note', null))}
         </>
       )
     }
@@ -364,13 +361,6 @@ export function Binder({ binder, counts, selected, onSelect, onChange, onEmptyTr
       <div className="binder-tree">
         {areaHeader('manuscript')}
         <ul role="tree">{binder.manuscript.map((it) => row(it, 0, 'manuscript'))}</ul>
-        {areaHeader(
-          'research',
-          <button className="icon-btn subtle inline" title="New note" onClick={() => add('note', null)}>
-            <Icon name="plus" size={13} />
-          </button>
-        )}
-        <ul role="tree">{binder.research.map((it) => row(it, 0, 'research'))}</ul>
         <div className="trash-block">
           {areaHeader(
             'trash',
